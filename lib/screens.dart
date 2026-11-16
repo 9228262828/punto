@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'models.dart';
+import 'settings_screen.dart';
 import 'store.dart';
 import 'ui.dart';
 
@@ -22,6 +23,13 @@ class HomeScreen extends StatelessWidget {
             icon: Icon(store.isDarkMode
                 ? Icons.light_mode_rounded
                 : Icons.dark_mode_rounded),
+          ),
+          IconButton(
+            tooltip: 'Settings',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const SettingsScreen()),
+            ),
+            icon: const Icon(Icons.settings_rounded),
           ),
           const SizedBox(width: 6),
         ],

@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -15,6 +14,7 @@ class PuntoStore extends ChangeNotifier {
   static const _darkKey = 'punto_dark_mode_v1';
 
   SharedPreferences? _preferences;
+  Future<void> _pendingWrites = Future<void>.value();
   final List<PuntoGame> games = [];
   bool isDarkMode = false;
 
@@ -124,15 +124,40 @@ class PuntoStore extends ChangeNotifier {
     _changed();
   }
 
-  void toggleDarkMode() {
-    isDarkMode = !isDarkMode;
-    _preferences?.setBool(_darkKey, isDarkMode);
+  void toggleDarkMode() => setDarkMode(!isDarkMode);
+
+  void setDarkMode(bool value) {
+    if (isDarkMode == value) return;
+    isDarkMode = value;
     notifyListeners();
+    _queueWrite(_saveDarkMode);
+  }
+
+  Future<void> _saveDarkMode() async {
+    final preferences = _preferences;
+    if (preferences == null) return;
+    await preferences.setBool(_darkKey, isDarkMode);
+  }
+
+  Future<void> clearAllData() async {
+    games.clear();
+    isDarkMode = false;
+    notifyListeners();
+
+    await _pendingWrites.catchError((_) {});
+    final preferences = _preferences ?? await SharedPreferences.getInstance();
+    _preferences = preferences;
+    await preferences.remove(_gamesKey);
+    await preferences.remove(_darkKey);
   }
 
   void _changed() {
     notifyListeners();
-    unawaited(_persist());
+    _queueWrite(_persist);
+  }
+
+  void _queueWrite(Future<void> Function() operation) {
+    _pendingWrites = _pendingWrites.catchError((_) {}).then((_) => operation());
   }
 
   Future<void> _persist() async {
